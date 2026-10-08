@@ -27,6 +27,31 @@ const router = createRouter({
       component: () => import("../views/StoryFormView.vue"),
       meta: { requiresAuth: true },
     },
+    ...[
+      { path: "authors", name: "authors", entity: "authors" },
+      { path: "categories", name: "categories", entity: "categories" },
+      { path: "age-groups", name: "age-groups", entity: "age-groups" },
+      { path: "tags", name: "tags", entity: "tags" },
+    ].flatMap(({ path, name, entity }) => [
+      {
+        path: `/${path}`,
+        name,
+        component: () => import("../views/EntityListView.vue"),
+        meta: { requiresAuth: true, requiresAdmin: true, entity },
+      },
+      {
+        path: `/${path}/new`,
+        name: `${name}-new`,
+        component: () => import("../views/EntityFormView.vue"),
+        meta: { requiresAuth: true, requiresAdmin: true, entity },
+      },
+      {
+        path: `/${path}/:id/edit`,
+        name: `${name}-edit`,
+        component: () => import("../views/EntityFormView.vue"),
+        meta: { requiresAuth: true, requiresAdmin: true, entity },
+      },
+    ]),
   ],
 });
 
@@ -35,6 +60,7 @@ router.beforeEach(async (to) => {
   await auth.init();
   if (to.meta.requiresAuth && !auth.user)
     return { name: "login", query: { next: to.fullPath } };
+  if (to.meta.requiresAdmin && !auth.isAdmin) return { name: "stories" };
   if (to.name === "login" && auth.user) return { name: "stories" };
 });
 

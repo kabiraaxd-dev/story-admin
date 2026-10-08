@@ -15,11 +15,17 @@ async function logout() {
   <header v-if="auth.user" class="bar">
     <RouterLink to="/">Stories</RouterLink>
     <RouterLink to="/stories/new">New story</RouterLink>
+    <template v-if="auth.isAdmin">
+      <RouterLink to="/authors">Authors</RouterLink>
+      <RouterLink to="/categories">Categories</RouterLink>
+      <RouterLink to="/age-groups">Age groups</RouterLink>
+      <RouterLink to="/tags">Tags</RouterLink>
+    </template>
     <span class="spacer" />
     <span>{{ auth.user.name }} ({{ auth.user.role }})</span>
     <button @click="logout">Log out</button>
   </header>
-  <RouterView />
+  <RouterView :key="$route.fullPath" />
 </template>
 
 <style>
