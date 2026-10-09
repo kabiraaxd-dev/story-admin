@@ -3,6 +3,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { http, ApiError } from '@/lib/http'
 import type { Option, AgeGroup, Author, StoryFull } from '@/types'
+import FileField from '@/components/FileField.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -91,8 +92,8 @@ async function save() {
       <label>Slug (URL name) <input v-model="form.slug" required @input="slugTouched = true" /></label>
       <label>Summary <input v-model="form.summary" required /></label>
       <label>Story text <textarea v-model="form.content" rows="10" required /></label>
-      <label>Main image URL <input v-model="form.mainImageUrl" type="url" placeholder="https://..." /></label>
-      <label>Audio URL (optional) <input v-model="form.audioUrl" type="url" placeholder="https://..." /></label>
+      <FileField v-model="form.mainImageUrl" kind="image" label="Main image" />
+      <FileField v-model="form.audioUrl" kind="audio" label="Audio" />
 
       <label>Author
         <select v-model="form.authorId">

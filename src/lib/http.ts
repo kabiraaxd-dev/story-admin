@@ -6,7 +6,7 @@ let accessToken: string | null = null;
 export const setToken = (t: string | null) => {
   accessToken = t;
 };
-
+export const getToken = () => accessToken;
 export class ApiError extends Error {
   constructor(
     public status: number,
