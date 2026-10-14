@@ -1,30 +1,57 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { Back } from '@element-plus/icons-vue'
 import { http, ApiError } from '@/lib/http'
-import type { Option, AgeGroup, Author, StoryFull } from '@/types'
 import FileField from '@/components/FileField.vue'
+import type { Option, AgeGroup, Author, StoryFull } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const id = computed(() => (route.params.id ? Number(route.params.id) : null))
 
+const formRef = ref<FormInstance>()
 const categories = ref<Option[]>([])
 const tags = ref<Option[]>([])
 const ageGroups = ref<AgeGroup[]>([])
 const authors = ref<Author[]>([])
 
 const form = reactive({
-  title: '', slug: '', summary: '', content: '',
-  mainImageUrl: '', audioUrl: '',
+  title: '',
+  slug: '',
+  summary: '',
+  content: '',
+  mainImageUrl: '',
+  audioUrl: '',
   authorId: null as number | null,
   categoryId: null as number | null,
   ageGroupId: null as number | null,
   tagIds: [] as number[],
 })
+
+const rules = reactive<FormRules<typeof form>>({
+  title: [{ required: true, message: 'Give the story a title', trigger: 'blur' }],
+  slug: [
+    { required: true, message: 'The URL name is required', trigger: 'blur' },
+    {
+      pattern: /^[a-z0-9]+(-[a-z0-9]+)*$/,
+      message: 'Use lowercase letters, numbers and single hyphens, like brave-little-fox',
+      trigger: 'blur',
+    },
+  ],
+  summary: [{ required: true, message: 'Add a short summary', trigger: 'blur' }],
+  content: [{ required: true, message: 'The story text is empty', trigger: 'blur' }],
+  authorId: [{ required: true, message: 'Choose an author', trigger: 'change' }],
+  categoryId: [{ required: true, message: 'Choose a category', trigger: 'change' }],
+  ageGroupId: [{ required: true, message: 'Choose an age group', trigger: 'change' }],
+})
+
 const slugTouched = ref(false)
-const error = ref('')
+const loading = ref(true)
 const saving = ref(false)
+const error = ref('')
 
 const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
@@ -41,40 +68,59 @@ onMounted(async () => {
       http<AgeGroup[]>('/age-groups'),
       http<Author[]>('/authors'),
     ])
-    categories.value = c; tags.value = t; ageGroups.value = a; authors.value = au
+    categories.value = c
+    tags.value = t
+    ageGroups.value = a
+    authors.value = au
 
     if (id.value) {
       const s = await http<StoryFull>(`/admin/stories/${id.value}`)
       Object.assign(form, {
-        title: s.title, slug: s.slug, summary: s.summary, content: s.content,
-        mainImageUrl: s.mainImageUrl ?? '', audioUrl: s.audioUrl ?? '',
-        authorId: s.authorId, categoryId: s.categoryId, ageGroupId: s.ageGroupId,
+        title: s.title,
+        slug: s.slug,
+        summary: s.summary,
+        content: s.content,
+        mainImageUrl: s.mainImageUrl ?? '',
+        audioUrl: s.audioUrl ?? '',
+        authorId: s.authorId,
+        categoryId: s.categoryId,
+        ageGroupId: s.ageGroupId,
         tagIds: s.tags.map((x) => x.id),
       })
       slugTouched.value = true
     }
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : 'Could not load the form.'
+  } finally {
+    loading.value = false
   }
 })
 
 async function save() {
   error.value = ''
-  if (!form.authorId || !form.categoryId || !form.ageGroupId) {
-    error.value = 'Please choose an author, category and age group.'
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) {
+    ElMessage.warning('Please fix the highlighted fields.')
     return
   }
+
   saving.value = true
   const body = {
-    title: form.title, slug: form.slug, summary: form.summary, content: form.content,
+    title: form.title,
+    slug: form.slug,
+    summary: form.summary,
+    content: form.content,
     mainImageUrl: form.mainImageUrl || null,
     audioUrl: form.audioUrl || null,
-    authorId: form.authorId, categoryId: form.categoryId,
-    ageGroupId: form.ageGroupId, tagIds: form.tagIds,
+    authorId: form.authorId,
+    categoryId: form.categoryId,
+    ageGroupId: form.ageGroupId,
+    tagIds: form.tagIds,
   }
   try {
     if (id.value) await http(`/admin/stories/${id.value}`, { method: 'PATCH', body })
     else await http('/admin/stories', { method: 'POST', body })
+    ElMessage.success('Story saved')
     router.push({ name: 'stories' })
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : 'Something went wrong.'
@@ -85,44 +131,72 @@ async function save() {
 </script>
 
 <template>
-  <main>
-    <h1>{{ id ? 'Edit story' : 'New story' }}</h1>
-    <form @submit.prevent="save">
-      <label>Title <input v-model="form.title" required @input="onTitleInput" /></label>
-      <label>Slug (URL name) <input v-model="form.slug" required @input="slugTouched = true" /></label>
-      <label>Summary <input v-model="form.summary" required /></label>
-      <label>Story text <textarea v-model="form.content" rows="10" required /></label>
-      <FileField v-model="form.mainImageUrl" kind="image" label="Main image" />
-      <FileField v-model="form.audioUrl" kind="audio" label="Audio" />
-
-      <label>Author
-        <select v-model="form.authorId">
-          <option :value="null" disabled>Choose...</option>
-          <option v-for="a in authors" :key="a.id" :value="a.id">{{ a.name }}</option>
-        </select>
-      </label>
-      <label>Category
-        <select v-model="form.categoryId">
-          <option :value="null" disabled>Choose...</option>
-          <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
-        </select>
-      </label>
-      <label>Age group
-        <select v-model="form.ageGroupId">
-          <option :value="null" disabled>Choose...</option>
-          <option v-for="a in ageGroups" :key="a.id" :value="a.id">{{ a.label }}</option>
-        </select>
-      </label>
-
-      <label>Tags</label>
+  <div class="page">
+    <div class="page-head">
       <div>
-        <label v-for="t in tags" :key="t.id" style="display: inline-block; margin-right: 1rem; font-weight: normal">
-          <input v-model="form.tagIds" type="checkbox" :value="t.id" style="width: auto" /> {{ t.name }}
-        </label>
+        <el-button link :icon="Back" @click="router.push('/')">All stories</el-button>
+        <h1>{{ id ? 'Edit story' : 'New story' }}</h1>
       </div>
+    </div>
 
-      <p v-if="error" class="error">{{ error }}</p>
-      <button :disabled="saving" style="margin-top: 1rem">{{ saving ? 'Saving...' : 'Save' }}</button>
-    </form>
-  </main>
+    <el-form ref="formRef" :model="form" :rules="rules" label-position="top" v-loading="loading" @submit.prevent="save">
+      <el-row :gutter="20">
+        <el-col :xs="24" :md="15">
+          <el-card shadow="never" header="Story" class="mb">
+            <el-form-item label="Title" prop="title">
+              <el-input v-model="form.title" size="large" @input="onTitleInput" />
+            </el-form-item>
+            <el-form-item label="URL name (slug)" prop="slug">
+              <el-input v-model="form.slug" @input="slugTouched = true" />
+            </el-form-item>
+            <el-form-item label="Summary" prop="summary">
+              <el-input v-model="form.summary" maxlength="200" show-word-count />
+            </el-form-item>
+            <el-form-item label="Story text" prop="content">
+              <el-input v-model="form.content" type="textarea" :rows="14" />
+            </el-form-item>
+          </el-card>
+        </el-col>
+
+        <el-col :xs="24" :md="9">
+          <el-card shadow="never" header="Details" class="mb">
+            <el-form-item label="Author" prop="authorId">
+              <el-select v-model="form.authorId" placeholder="Choose an author" style="width: 100%">
+                <el-option v-for="a in authors" :key="a.id" :label="a.name" :value="a.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Category" prop="categoryId">
+              <el-select v-model="form.categoryId" placeholder="Choose a category" style="width: 100%">
+                <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Age group" prop="ageGroupId">
+              <el-select v-model="form.ageGroupId" placeholder="Choose an age group" style="width: 100%">
+                <el-option v-for="a in ageGroups" :key="a.id" :label="a.label" :value="a.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Tags">
+              <el-select v-model="form.tagIds" multiple filterable placeholder="Choose tags" style="width: 100%">
+                <el-option v-for="t in tags" :key="t.id" :label="t.name" :value="t.id" />
+              </el-select>
+            </el-form-item>
+          </el-card>
+
+          <el-card shadow="never" header="Media" class="mb">
+            <el-form-item label="Main image">
+              <FileField v-model="form.mainImageUrl" kind="image" />
+            </el-form-item>
+            <el-form-item label="Audio narration (optional)">
+              <FileField v-model="form.audioUrl" kind="audio" />
+            </el-form-item>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" class="mb" />
+
+      <el-button type="primary" native-type="submit" size="large" :loading="saving">Save story</el-button>
+      <el-button size="large" @click="router.push('/')">Cancel</el-button>
+    </el-form>
+  </div>
 </template>
