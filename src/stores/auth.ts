@@ -1,12 +1,16 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { http, refresh, setToken } from "@/lib/http";
-import type { User } from "@/types";
+import type { Permission, Role, User } from "@/types";
 
 export const useAuth = defineStore("auth", () => {
   const user = ref<User | null>(null);
   const ready = ref(false);
-  const isAdmin = computed(() => user.value?.role === "ADMIN");
+  // const isAdmin = computed(() => user.value?.role === "ADMIN");
+
+  const can = (p: Permission) => !!user.value?.permissions.includes(p);
+  const canAny = (...ps: Permission[]) => ps.some(can);
+  const hasRole = (r: Role) => !!user.value?.roles.includes(r);
 
   // Runs once on startup: restores the session from the refresh cookie.
   async function init() {
@@ -33,5 +37,6 @@ export const useAuth = defineStore("auth", () => {
     user.value = null;
   }
 
-  return { user, ready, isAdmin, init, login, logout };
+  // return { user, ready, isAdmin, init, login, logout };
+   return { user, ready, can, canAny, hasRole, init, login, logout };
 });
