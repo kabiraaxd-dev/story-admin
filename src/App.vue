@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 // import { ElContainer, ElAside, ElHeader, ElMain, ElFooter, ElMenu, ElMenuItem, ElIcon, ElButton, ElTag } from 'element-plus'
-import { DataAnalysis, Document, Notebook, Menu as iconMenu, CollectionTag, DCaret } from '@element-plus/icons-vue'
+import { DataAnalysis, Document, Notebook, Menu as iconMenu, CollectionTag, DCaret, Check, Close } from '@element-plus/icons-vue'
 import { useAuth } from '@/stores/auth'
 import { el } from 'element-plus/es/locales.mjs'
 
@@ -44,10 +44,20 @@ async function logout() {
   <div class="common-layout">
     <el-container v-if="auth.user" class="layout" >
       <el-aside class="sidebar" :width="isCollapse ? '64px' : '220px'">
-        <el-radio-group v-model="isCollapse" style="margin-bottom: 20px">
+        <!-- <el-radio-group v-model="isCollapse" style="margin-bottom: 20px">
           <el-radio-button :value="false">expand</el-radio-button>
           <el-radio-button :value="true">collapse</el-radio-button>
-        </el-radio-group>
+        </el-radio-group> -->
+        <div class="logo" style="height: 60px; display: flex; align-items: center; font-weight: bold;">
+          <el-switch
+          v-model="isCollapse"
+          style="margin-left: 16px"
+          :active-text="isCollapse ? 'Expand' : 'Collapse'"
+          inline-prompt
+          :active-icon="Check"
+          :inactive-icon="Close"
+          />
+        </div>
         <el-menu
         default-active="active"
         router
@@ -85,17 +95,6 @@ async function logout() {
     <el-container>
       <el-header class="header">
         <RouterLink to="/" class="brand">📚 Story Admin</RouterLink>
-  
-        <!-- <el-menu mode="horizontal" :ellipsis="false" :default-active="active" router class="nav">
-          <el-menu-item index="/">Stories</el-menu-item>
-          <el-menu-item index="/stories/new">New story</el-menu-item>
-          <el-menu-item index="/authors" v-if="auth.isAdmin">Authors</el-menu-item>
-          <el-menu-item index="/categories" v-if="auth.isAdmin">Categories</el-menu-item>
-          <el-menu-item index="/age-groups" v-if="auth.isAdmin">Age groups</el-menu-item>
-          <el-menu-item index="/tags" v-if="auth.isAdmin">Tags</el-menu-item>
-        </el-menu> -->
-  
-        
         <div class="user">
           <span class="name">{{ auth.user.name }}</span>
           <el-tag size="small" :type="auth.isAdmin ? 'danger' : 'info'">{{ auth.user.role }}</el-tag>
@@ -119,7 +118,7 @@ async function logout() {
 <style scoped>
 .layout { min-height: 100vh; }
 .aside { background: var(--el-bg-color); border-right: 1px solid var(--el-border-color-light); }
-.side-menu { border-right: none; }
+.side-menu { border-right: none; height: 100vh; }
 
 .header {
   display: flex;

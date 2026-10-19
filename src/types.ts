@@ -26,6 +26,7 @@ export interface StoryRow {
   title: string;
   slug: string;
   status: Status;
+  author: { name: string };
   createdById: number | null;
   updatedAt: string;
 }

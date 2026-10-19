@@ -2,14 +2,16 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Back } from '@element-plus/icons-vue'
 import { http, ApiError } from '@/lib/http'
+import { useAuth } from '@/stores/auth'
 import FileField from '@/components/FileField.vue'
-import type { Option, AgeGroup, Author, StoryFull } from '@/types'
+import type { Option, AgeGroup, Author, StoryFull, Status } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuth()
 const id = computed(() => (route.params.id ? Number(route.params.id) : null))
 
 const formRef = ref<FormInstance>()
@@ -30,6 +32,20 @@ const form = reactive({
   ageGroupId: null as number | null,
   tagIds: [] as number[],
 })
+const storyStatus = ref<Status | null>(null)
+const selectedStatus = ref<'DRAFT' | 'IN_REVIEW'>('DRAFT')
+const changingStatus = ref(false)
+
+const statusLabel: Record<Status, string> = {
+  DRAFT: 'Draft',
+  IN_REVIEW: 'In review',
+  PUBLISHED: 'Published',
+}
+const statusType: Record<Status, 'info' | 'warning' | 'success'> = {
+  DRAFT: 'info',
+  IN_REVIEW: 'warning',
+  PUBLISHED: 'success',
+}
 
 const rules = reactive<FormRules<typeof form>>({
   title: [{ required: true, message: 'Give the story a title', trigger: 'blur' }],
@@ -87,6 +103,8 @@ onMounted(async () => {
         ageGroupId: s.ageGroupId,
         tagIds: s.tags.map((x) => x.id),
       })
+      storyStatus.value = s.status
+      selectedStatus.value = s.status === 'IN_REVIEW' ? 'IN_REVIEW' : 'DRAFT'
       slugTouched.value = true
     }
   } catch (e) {
@@ -95,6 +113,40 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function updatePublishedStatus() {
+  if (!id.value || !auth.isAdmin || storyStatus.value !== 'PUBLISHED') return
+
+  const nextStatus = selectedStatus.value
+  const label = statusLabel[nextStatus]
+  try {
+    await ElMessageBox.confirm(
+      `This story will no longer be publicly visible. Move it to ${label.toLowerCase()}?`,
+      'Unpublish story',
+      {
+        type: 'warning',
+        confirmButtonText: `Move to ${label.toLowerCase()}`,
+        cancelButtonText: 'Cancel',
+      },
+    )
+  } catch {
+    return
+  }
+
+  changingStatus.value = true
+  try {
+    await http(`/admin/stories/${id.value}/unpublish`, {
+      method: 'POST',
+      body: { status: nextStatus },
+    })
+    storyStatus.value = nextStatus
+    ElMessage.success(`Story moved to ${label.toLowerCase()}`)
+  } catch (e) {
+    ElMessage.error(e instanceof ApiError ? e.message : 'Could not update story status.')
+  } finally {
+    changingStatus.value = false
+  }
+}
 
 async function save() {
   error.value = ''
@@ -134,7 +186,7 @@ async function save() {
   <div class="page">
     <div class="page-head">
       <div>
-        <el-button link :icon="Back" @click="router.push('/')">All stories</el-button>
+        <el-button link :icon="Back" @click="router.push('/stories')">All stories</el-button>
         <h1>{{ id ? 'Edit story' : 'New story' }}</h1>
       </div>
     </div>
@@ -160,6 +212,25 @@ async function save() {
 
         <el-col :xs="24" :md="9">
           <el-card shadow="never" header="Details" class="mb">
+            <el-form-item v-if="storyStatus" label="Status">
+              <div class="status-control">
+                <el-tag :type="statusType[storyStatus]">{{ statusLabel[storyStatus] }}</el-tag>
+                <template v-if="auth.isAdmin && storyStatus === 'PUBLISHED'">
+                  <el-select v-model="selectedStatus" aria-label="New story status">
+                    <el-option label="Draft" value="DRAFT" />
+                    <el-option label="In review" value="IN_REVIEW" />
+                  </el-select>
+                  <el-button
+                    type="warning"
+                    plain
+                    :loading="changingStatus"
+                    @click="updatePublishedStatus"
+                  >
+                    Unpublish
+                  </el-button>
+                </template>
+              </div>
+            </el-form-item>
             <el-form-item label="Author" prop="authorId">
               <el-select v-model="form.authorId" placeholder="Choose an author" style="width: 100%">
                 <el-option v-for="a in authors" :key="a.id" :label="a.name" :value="a.id" />
@@ -200,3 +271,16 @@ async function save() {
     </el-form>
   </div>
 </template>
+
+<style scoped>
+.status-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-control .el-select {
+  width: 140px;
+}
+</style>

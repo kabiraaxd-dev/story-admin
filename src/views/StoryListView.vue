@@ -114,6 +114,10 @@ onMounted(load)
       <el-table :data="visible" v-loading="loading" stripe style="width: 100%">
         <el-table-column prop="title" label="Title" min-width="220" />
 
+        <el-table-column label="Author" min-width="160">
+          <template #default="{ row }">{{ row.author.name }}</template>
+        </el-table-column>
+
         <el-table-column label="Status" width="130">
           <template #default="{ row }">
             <el-tag :type="statusType[row.status]">{{ statusLabel[row.status] }}</el-tag>

@@ -71,30 +71,42 @@ async function save() {
 </script>
 
 <template>
-  <main>
-    <h1>{{ id ? `Edit ${config.singular}` : `Add ${config.singular}` }}</h1>
-    <p v-if="loading">Loading...</p>
-    <form v-else @submit.prevent="save">
-      <label v-for="field in config.fields" :key="field.key">
-        {{ field.label }}
-        <textarea
-          v-if="field.type === 'textarea'"
-          v-model="form[field.key]"
-          rows="4"
-          :required="field.required"
-        />
-        <input
-          v-else
-          v-model="form[field.key]"
-          :type="field.type ?? 'text'"
-          :required="field.required"
-          :min="field.min"
-          @input="onFieldInput(field.key)"
-        />
-      </label>
-      <p v-if="error" class="error">{{ error }}</p>
-      <button :disabled="saving">{{ saving ? "Saving..." : "Save" }}</button>
-      <RouterLink :to="`/${kind}`">Cancel</RouterLink>
-    </form>
-  </main>
+  <div class="page">
+    <div class="page-head">
+      <h1>{{ id ? `Edit ${config.singular}` : `Add ${config.singular}` }}</h1>
+    </div>
+    <el-card shadow="never" >
+      <p v-if="loading">Loading...</p>
+      <el-form v-else  :model="form" @submit.prevent="save">
+        <el-form-item v-for="field in config.fields" :key="field.key" :label="field.label" label-width="8rem" :prop="field.key" :rules="{ required: field.required, message: `${field.label} is required`, trigger: 'blur' }">
+          
+              <el-input
+              v-if="field.type !== 'textarea'"
+              v-model="form[field.key]"
+              :type="field.type ?? 'text'"
+              :required="field.required"
+              :min="field.min"
+              @input="onFieldInput(field.key)"
+              />
+              <el-input v-else
+              type="textarea"
+              v-model="form[field.key]"
+              :rows="4"
+              :required="field.required"
+              />
+        </el-form-item>
+        
+        <el-divider></el-divider>
+          <el-button type="primary" :disabled="saving" @click="save">
+            {{ saving ? "Saving..." : "Save" }}
+          </el-button>
+          <RouterLink :to="`/${kind}`" style="margin-left: 1rem;">
+            <el-button>Cancel</el-button>
+          </RouterLink>
+        
+        <p v-if="error" class="error">{{ error }}</p>
+      </el-form>
+    </el-card>
+  </div>
 </template>
+
