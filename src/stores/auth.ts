@@ -8,9 +8,9 @@ export const useAuth = defineStore("auth", () => {
   const ready = ref(false);
   // const isAdmin = computed(() => user.value?.role === "ADMIN");
 
-  const can = (p: Permission) => !!user.value?.permissions.includes(p);
+  const can = (p: Permission) => user.value?.permissions?.includes(p) ?? false;
   const canAny = (...ps: Permission[]) => ps.some(can);
-  const hasRole = (r: Role) => !!user.value?.roles.includes(r);
+  const hasRole = (r: Role) => user.value?.roles?.includes(r) ?? false;
 
   // Runs once on startup: restores the session from the refresh cookie.
   async function init() {

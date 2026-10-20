@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
-// import { ElContainer, ElAside, ElHeader, ElMain, ElFooter, ElMenu, ElMenuItem, ElIcon, ElButton, ElTag } from 'element-plus'
-import { DataAnalysis, Document, Notebook, Menu as iconMenu, CollectionTag, DCaret, Check, Close } from '@element-plus/icons-vue'
+import { ROLE_LABELS } from '@/types'
+import { DataAnalysis, Document, Notebook, Menu as iconMenu, CollectionTag, DCaret, Check, Close, User } from '@element-plus/icons-vue'
 import { useAuth } from '@/stores/auth'
 import { el } from 'element-plus/es/locales.mjs'
 
@@ -10,7 +10,7 @@ const auth = useAuth()
 const router = useRouter()
 
 // Highlight the right menu item (the edit pages count as "Stories").
-const active = computed(() => (route.path === '/stories/new' ? '/stories/new' : '/'))
+// const active = computed(() => (route.path === '/stories/new' ? '/stories/new' : '/'))
 const isCollapse = ref(false)
 
 const handleOpen = (key: string, keyPath: string[]) => {
@@ -27,27 +27,11 @@ async function logout() {
 </script>
 
 <template>
-  <!-- <header v-if="auth.user" class="bar">
-    <RouterLink to="/">Stories</RouterLink>
-    <RouterLink to="/stories/new">New story</RouterLink>
-    <template v-if="auth.isAdmin">
-      <RouterLink to="/authors">Authors</RouterLink>
-      <RouterLink to="/categories">Categories</RouterLink>
-      <RouterLink to="/age-groups">Age groups</RouterLink>
-      <RouterLink to="/tags">Tags</RouterLink>
-    </template>
-    <span class="spacer" />
-    <span>{{ auth.user.name }} ({{ auth.user.role }})</span>
-    <button @click="logout">Log out</button>
-  </header>
-  <RouterView :key="$route.fullPath" /> -->
+  
   <div class="common-layout">
     <el-container v-if="auth.user" class="layout" >
       <el-aside class="sidebar" :width="isCollapse ? '64px' : '220px'">
-        <!-- <el-radio-group v-model="isCollapse" style="margin-bottom: 20px">
-          <el-radio-button :value="false">expand</el-radio-button>
-          <el-radio-button :value="true">collapse</el-radio-button>
-        </el-radio-group> -->
+        
         <div class="logo" style="height: 60px; display: flex; align-items: center; font-weight: bold;">
           <el-switch
           v-model="isCollapse"
@@ -70,25 +54,39 @@ async function logout() {
           <el-icon><DataAnalysis /></el-icon>
           <template #title>Dashboard</template>
         </el-menu-item>
-        <el-menu-item index="/authors" v-if="auth.isAdmin" >
-          <el-icon><Notebook /></el-icon>
-          <template #title>Authors</template>
-        </el-menu-item>
-        <el-menu-item index="/categories" v-if="auth.isAdmin">
-          <el-icon><icon-menu /></el-icon>
-          <template #title>Categories</template>
-        </el-menu-item>
-        <el-menu-item index="/stories" >
+        
+        <el-menu-item v-if="auth.canAny('story:write', 'story:review')" index="/stories" >
           <el-icon><Document /></el-icon>
           <template #title>Stories</template>
         </el-menu-item>
-        <el-menu-item index="/age-groups" v-if="auth.isAdmin">
-          <el-icon><DCaret /></el-icon>
-          <template #title>Age groups</template>
-        </el-menu-item>
-        <el-menu-item index="/tags" v-if="auth.isAdmin">
-          <el-icon><CollectionTag /></el-icon>
-          <template #title>Tags</template>
+
+        <el-menu-item-group v-if="auth.can('taxonomy:manage')" title="Taxonomy">
+          
+          <el-menu-item index="/authors"  >
+            <el-icon><Notebook /></el-icon>
+            <template #title>Authors</template>
+          </el-menu-item>
+
+          <el-menu-item index="/categories" >
+            <el-icon><icon-menu /></el-icon>
+            <template #title>Categories</template>
+          </el-menu-item>
+
+          <el-menu-item index="/age-groups" >
+            <el-icon><DCaret /></el-icon>
+            <template #title>Age groups</template>
+          </el-menu-item>
+
+          <el-menu-item index="/tags" >
+            <el-icon><CollectionTag /></el-icon>
+            <template #title>Tags</template>
+          </el-menu-item>
+
+        </el-menu-item-group>
+
+        <el-menu-item v-if="auth.can('user:manage')" index="/users" >
+          <el-icon><User /></el-icon>
+          <template #title>Users</template>
         </el-menu-item>
       </el-menu>
     </el-aside>
@@ -97,7 +95,7 @@ async function logout() {
         <RouterLink to="/" class="brand">📚 Story Admin</RouterLink>
         <div class="user">
           <span class="name">{{ auth.user.name }}</span>
-          <el-tag size="small" :type="auth.isAdmin ? 'danger' : 'info'">{{ auth.user.role }}</el-tag>
+          <el-tag v-for="r in auth.user.roles" :key="r" size="small" :type="r === 'ADMIN' ? 'danger' : 'info'">{{ ROLE_LABELS[r] }}</el-tag>
           <el-button size="small" @click="logout">Log out</el-button>
         </div>
       </el-header>

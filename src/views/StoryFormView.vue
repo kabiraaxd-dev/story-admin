@@ -40,11 +40,13 @@ const statusLabel: Record<Status, string> = {
   DRAFT: 'Draft',
   IN_REVIEW: 'In review',
   PUBLISHED: 'Published',
+  CHANGES_REQUESTED: 'Changes requested',
 }
-const statusType: Record<Status, 'info' | 'warning' | 'success'> = {
+const statusType: Record<Status, 'info' | 'warning' | 'success' | 'danger'> = {
   DRAFT: 'info',
   IN_REVIEW: 'warning',
   PUBLISHED: 'success',
+  CHANGES_REQUESTED: 'danger',
 }
 
 const rules = reactive<FormRules<typeof form>>({

@@ -1,12 +1,12 @@
-export type Role = "ADMIN" | "CREATOR";
-export type Status = "DRAFT" | "IN_REVIEW" | "PUBLISHED";
+// export type Role = "ADMIN" | "CREATOR";
+// export type Status = "DRAFT" | "IN_REVIEW" | "PUBLISHED";
 
-export interface User {
+/* export interface User {
   id: number;
   name: string;
   email: string;
   role: Role;
-}
+} */
 export interface Option {
   id: number;
   name: string;
@@ -27,6 +27,7 @@ export interface StoryRow {
   slug: string;
   status: Status;
   author: { name: string };
+  createdBy: { name: string } | null;
   createdById: number | null;
   reviewNote: string | null;
   updatedAt: string;
